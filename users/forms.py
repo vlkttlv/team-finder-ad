@@ -5,18 +5,21 @@ from .models import User
 
 
 class RegisterForm(forms.Form):
+    """Форма регистрации нового пользователя"""
     name = forms.CharField(max_length=124, label="Имя")
     surname = forms.CharField(max_length=124, label="Фамилия")
     email = forms.EmailField(label="Email")
     password = forms.CharField(widget=forms.PasswordInput, label="Пароль")
 
     def clean_email(self):
+        """Валидирует email, проверяя, что пользователь с таким email не существует"""
         email = self.cleaned_data["email"].lower()
         if User.objects.filter(email=email).exists():
             raise forms.ValidationError("Пользователь с таким email уже существует")
         return email
 
     def save(self):
+        """Создает нового пользователя на основе данных формы"""
         return User.objects.create_user(
             email=self.cleaned_data["email"],
             password=self.cleaned_data["password"],
@@ -26,10 +29,12 @@ class RegisterForm(forms.Form):
 
 
 class LoginForm(forms.Form):
+    """Форма входа пользователя"""
     email = forms.EmailField(label="Email")
     password = forms.CharField(widget=forms.PasswordInput, label="Пароль")
 
     def clean(self):
+        """Валидирует форму, аутентифицируя пользователя"""
         cleaned = super().clean()
         email = cleaned.get("email")
         password = cleaned.get("password")
@@ -42,6 +47,7 @@ class LoginForm(forms.Form):
 
 
 class UserProfileForm(forms.ModelForm):
+    """Форма редактирования профиля пользователя"""
     avatar = forms.ImageField(required=False)
 
     class Meta:
@@ -57,6 +63,7 @@ class UserProfileForm(forms.ModelForm):
         }
 
     def clean_phone(self):
+        """Валидирует телефонный номер пользователя, нормализует формат в +7XXXXXXXXXX"""
         phone = (self.cleaned_data.get("phone") or "").strip()
         if not phone:
             return None
@@ -72,6 +79,7 @@ class UserProfileForm(forms.ModelForm):
         return phone
 
     def clean_github_url(self):
+        """Валидирует ссылку на GitHub пользователя"""
         url = (self.cleaned_data.get("github_url") or "").strip()
         if not url:
             return ""

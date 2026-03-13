@@ -84,7 +84,7 @@
         </div>
 
     </div>
-
+    {% if user.id == project.owner.id %}
     <div class="project-participants-card">
     <h3>Участники проекта (<span id="participants-count" style="display:inline">{{ project.participants.all|length }}</span>)</h3>
     <div id="participants-list" class="participants-list">
@@ -109,6 +109,7 @@
         {% endfor %}
         </div>
     </div>
+    {% endif %}
 </div>
 {% endblock %}
 {% endwith %}

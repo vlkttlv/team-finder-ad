@@ -1,5 +1,5 @@
-﻿
-from django.contrib.auth.decorators import login_required
+﻿from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -9,20 +9,25 @@ from .models import Project
 
 
 def project_list_view(request):
+    """Представление списка всех проектов с пагинацией"""
     projects = (
         Project.objects.select_related("owner")
         .prefetch_related("participants")
         .order_by("-created_at")
     )
 
+    paginator = Paginator(projects, 12)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
     return render(
         request,
         "projects/project_list.html",
-        {"projects": projects},
+        {"projects": page_obj, "page_obj": page_obj},
     )
 
 
 def project_detail_view(request, project_id):
+    """Представление детальной информации о проекте"""
     project = get_object_or_404(
         Project.objects.select_related("owner").prefetch_related("participants"),
         pk=project_id,
@@ -32,6 +37,7 @@ def project_detail_view(request, project_id):
 
 @login_required
 def project_create_view(request):
+    """Представление для создания нового проекта"""
     if request.method == "POST":
         form = ProjectForm(request.POST)
         if form.is_valid():
@@ -51,6 +57,7 @@ def project_create_view(request):
 
 @login_required
 def project_edit_view(request, project_id):
+    """Представление для редактирования существующего проекта"""
     project = get_object_or_404(Project, pk=project_id)
     if project.owner_id != request.user.id:
         return HttpResponseForbidden("Only owner can edit this project")
@@ -73,6 +80,7 @@ def project_edit_view(request, project_id):
 @login_required
 @require_POST
 def project_complete_view(request, project_id):
+    """Представление для закрытия проекта владельцем"""
     project = get_object_or_404(Project, pk=project_id)
     if project.owner_id != request.user.id or project.status != "open":
         return JsonResponse({"status": "error"}, status=403)
@@ -84,6 +92,7 @@ def project_complete_view(request, project_id):
 @login_required
 @require_POST
 def toggle_participate_view(request, project_id):
+    """Представление для присоединения/отписки пользователя к проекту"""
     project = get_object_or_404(Project, pk=project_id)
     user = request.user
     if project.owner_id == user.id:
@@ -104,6 +113,7 @@ def toggle_participate_view(request, project_id):
 @login_required
 @require_POST
 def toggle_favorite_view(request, project_id):
+    """Представление для добавления/удаления проекта из избранного пользователя"""
     project = get_object_or_404(Project, pk=project_id)
     user = request.user
 
@@ -119,6 +129,7 @@ def toggle_favorite_view(request, project_id):
 
 @login_required
 def favorites_list_view(request):
+    """Представление списка проектов, добавленных пользователем в избранное"""
     projects = (
         request.user.favorites.select_related("owner")
         .prefetch_related("participants")
