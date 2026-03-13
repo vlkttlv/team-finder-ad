@@ -84,11 +84,10 @@
         </div>
 
     </div>
-    {% if user.id == project.owner.id %}
     <div class="project-participants-card">
-    <h3>Участники проекта (<span id="participants-count" style="display:inline">{{ project.participants.all|length }}</span>)</h3>
+    <h3>Участники проекта (<span id="participants-count" style="display:inline">{{ participants_count }}</span>)</h3>
     <div id="participants-list" class="participants-list">
-        {% for member in project.participants.all %}
+        {% for member in project_participants %}
         <a href="/users/{{ member.id }}" id="participant-{{ member.id }}">
             <div class="participant-item">
                 {% if member.avatar %}
@@ -109,7 +108,6 @@
         {% endfor %}
         </div>
     </div>
-    {% endif %}
 </div>
 {% endblock %}
 {% endwith %}

@@ -32,7 +32,20 @@ def project_detail_view(request, project_id):
         Project.objects.select_related("owner").prefetch_related("participants"),
         pk=project_id,
     )
-    return render(request, "projects/project-details.html", {"project": project})
+    
+    participants = list(project.participants.all())
+    if all(member.id != project.owner_id for member in participants):
+        participants.append(project.owner)
+
+    return render(
+        request,
+        "projects/project-details.html",
+        {
+            "project": project,
+            "project_participants": participants,
+            "participants_count": len(participants),
+        },
+    )
 
 
 @login_required
