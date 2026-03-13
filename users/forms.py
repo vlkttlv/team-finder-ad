@@ -48,7 +48,10 @@ class LoginForm(forms.Form):
 
 class UserProfileForm(forms.ModelForm):
     """Форма редактирования профиля пользователя"""
-    avatar = forms.ImageField(required=False)
+    avatar = forms.ImageField(
+        required=False,
+        widget=forms.FileInput(attrs={"accept": "image/*"}),
+    )
 
     class Meta:
         model = User
