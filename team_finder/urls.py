@@ -5,7 +5,7 @@ from django.shortcuts import redirect
 from django.urls import include, path
 
 urlpatterns = [
-    path("", lambda request: redirect("/project/list/")),
+    path("", lambda request: redirect("project_list")),
     path("projects/", include("projects.urls")),
     path("project/", include("projects.urls")),
     path("users/", include("users.urls")),
