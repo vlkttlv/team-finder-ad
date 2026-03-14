@@ -1,21 +1,29 @@
 ﻿from django import forms
 from django.contrib.auth import authenticate
 
+from team_finder.constants import USER_NAME_MAX_LENGTH, USER_SURNAME_MAX_LENGTH
+from team_finder.validators import validate_github_url
+
 from .models import User
 
 
 class RegisterForm(forms.Form):
-    """Форма регистрации нового пользователя"""
-    name = forms.CharField(max_length=124, label="Имя")
-    surname = forms.CharField(max_length=124, label="Фамилия")
+    """Форма регистрации нового пользователя."""
+    name = forms.CharField(max_length=USER_NAME_MAX_LENGTH, label="Имя")
+    surname = forms.CharField(
+        max_length=USER_SURNAME_MAX_LENGTH,
+        label="Фамилия"
+    )
     email = forms.EmailField(label="Email")
     password = forms.CharField(widget=forms.PasswordInput, label="Пароль")
 
     def clean_email(self):
-        """Валидирует email, проверяя, что пользователь с таким email не существует"""
+        """Проверяет, что пользователь с таким email еще не существует"""
         email = self.cleaned_data["email"].lower()
         if User.objects.filter(email=email).exists():
-            raise forms.ValidationError("Пользователь с таким email уже существует")
+            raise forms.ValidationError(
+                "Пользователь с таким email уже существует"
+                )
         return email
 
     def save(self):
@@ -73,7 +81,9 @@ class UserProfileForm(forms.ModelForm):
         if phone.startswith("8"):
             phone = "+7" + phone[1:]
         if not (phone.startswith("+7") and len(phone) == 12 and phone[1:].isdigit()):
-            raise forms.ValidationError("Номер должен быть в формате 8XXXXXXXXXX или +7XXXXXXXXXX")
+            raise forms.ValidationError(
+                "Номер должен быть в формате 8XXXXXXXXXX или +7XXXXXXXXXX"
+                )
         qs = User.objects.filter(phone=phone)
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
@@ -83,9 +93,4 @@ class UserProfileForm(forms.ModelForm):
 
     def clean_github_url(self):
         """Валидирует ссылку на GitHub пользователя"""
-        url = (self.cleaned_data.get("github_url") or "").strip()
-        if not url:
-            return ""
-        if "github.com" not in url.lower():
-            raise forms.ValidationError("Ссылка должна вести на GitHub")
-        return url
+        return validate_github_url(self.cleaned_data.get("github_url"))

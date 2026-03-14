@@ -1,23 +1,25 @@
-﻿from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
+﻿from http import HTTPStatus
+
+from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from .forms import ProjectForm
-from .models import Project
+from projects.forms import ProjectForm
+from projects.models import Project
+from team_finder.service import paginate_queryset
+from team_finder.constants import PROJECT_STATUS_OPEN, PROJECT_STATUS_CLOSED
 
 
 def project_list_view(request):
-    """Представление списка всех проектов с пагинацией"""
+    """Представление списка всех проектов с пагинацией."""
     projects = (
         Project.objects.select_related("owner")
         .prefetch_related("participants")
         .order_by("-created_at")
     )
 
-    paginator = Paginator(projects, 12)
-    page_obj = paginator.get_page(request.GET.get("page"))
+    page_obj = paginate_queryset(projects, request)
 
     return render(
         request,
@@ -27,13 +29,14 @@ def project_list_view(request):
 
 
 def project_detail_view(request, project_id):
-    """Представление детальной информации о проекте"""
+    """Представление детальной информации о проекте."""
     project = get_object_or_404(
         Project.objects.select_related("owner").prefetch_related("participants"),
         pk=project_id,
     )
-    
+
     participants = list(project.participants.all())
+
     if all(member.id != project.owner_id for member in participants):
         participants.append(project.owner)
 
@@ -50,17 +53,17 @@ def project_detail_view(request, project_id):
 
 @login_required
 def project_create_view(request):
-    """Представление для создания нового проекта"""
-    if request.method == "POST":
-        form = ProjectForm(request.POST)
-        if form.is_valid():
-            project = form.save(commit=False)
-            project.owner = request.user
-            project.save()
-            project.participants.add(request.user)
-            return redirect("projects:detail", project_id=project.id)
-    else:
-        form = ProjectForm()
+    """Представление для создания нового проекта."""
+    form = ProjectForm(request.POST or None)
+
+    if form.is_valid():
+        project = form.save(commit=False)
+        project.owner = request.user
+        project.save()
+        project.participants.add(request.user)
+
+        return redirect("projects:detail", project_id=project.id)
+
     return render(
         request,
         "projects/create-project.html",
@@ -70,18 +73,17 @@ def project_create_view(request):
 
 @login_required
 def project_edit_view(request, project_id):
-    """Представление для редактирования существующего проекта"""
+    """Представление для редактирования существующего проекта."""
     project = get_object_or_404(Project, pk=project_id)
-    if project.owner_id != request.user.id:
-        return HttpResponseForbidden("Only owner can edit this project")
 
-    if request.method == "POST":
-        form = ProjectForm(request.POST, instance=project)
-        if form.is_valid():
-            form.save()
-            return redirect("projects:detail", project_id=project.id)
-    else:
-        form = ProjectForm(instance=project)
+    if project.owner_id != request.user.id:
+        return HttpResponseForbidden("Только владелец может редактировать этот проект")
+
+    form = ProjectForm(request.POST or None, instance=project)
+
+    if form.is_valid():
+        form.save()
+        return redirect("projects:detail", project_id=project.id)
 
     return render(
         request,
@@ -93,25 +95,32 @@ def project_edit_view(request, project_id):
 @login_required
 @require_POST
 def project_complete_view(request, project_id):
-    """Представление для закрытия проекта владельцем"""
+    """Представление для закрытия проекта владельцем."""
     project = get_object_or_404(Project, pk=project_id)
-    if project.owner_id != request.user.id or project.status != "open":
-        return JsonResponse({"status": "error"}, status=403)
-    project.status = "closed"
+
+    if project.owner_id != request.user.id or project.status != PROJECT_STATUS_OPEN:
+        return JsonResponse({"status": "error"}, status=HTTPStatus.FORBIDDEN)
+
+    project.status = PROJECT_STATUS_CLOSED
     project.save(update_fields=["status"])
-    return JsonResponse({"status": "ok", "project_status": "closed"})
+
+    return JsonResponse(
+        {"status": "ok", "project_status": PROJECT_STATUS_CLOSED}
+    )
 
 
 @login_required
 @require_POST
 def toggle_participate_view(request, project_id):
-    """Представление для присоединения/отписки пользователя к проекту"""
+    """Представление для присоединения или выхода пользователя из проекта."""
     project = get_object_or_404(Project, pk=project_id)
     user = request.user
+
     if project.owner_id == user.id:
-        return JsonResponse({"status": "error"}, status=400)
-    if project.status == "closed":
-        return JsonResponse({"status": "error"}, status=400)
+        return JsonResponse({"status": "error"}, status=HTTPStatus.BAD_REQUEST)
+
+    if project.status == PROJECT_STATUS_CLOSED:
+        return JsonResponse({"status": "error"}, status=HTTPStatus.BAD_REQUEST)
 
     if project.participants.filter(pk=user.id).exists():
         project.participants.remove(user)
@@ -126,7 +135,7 @@ def toggle_participate_view(request, project_id):
 @login_required
 @require_POST
 def toggle_favorite_view(request, project_id):
-    """Представление для добавления/удаления проекта из избранного пользователя"""
+    """Добавляет или удаляет проект из избранного пользователя."""
     project = get_object_or_404(Project, pk=project_id)
     user = request.user
 
@@ -142,10 +151,15 @@ def toggle_favorite_view(request, project_id):
 
 @login_required
 def favorites_list_view(request):
-    """Представление списка проектов, добавленных пользователем в избранное"""
+    """Представление списка проектов из избранного пользователя."""
     projects = (
         request.user.favorites.select_related("owner")
         .prefetch_related("participants")
         .all()
     )
-    return render(request, "projects/favorite_projects.html", {"projects": projects})
+
+    return render(
+        request,
+        "projects/favorite_projects.html",
+        {"projects": projects},
+    )
