@@ -14,7 +14,7 @@
 
 ## Стек технологий
 
-- **Python 3**
+- **Python 3.12**
 - **Django 5**
 - **PostgreSQL**
 - **Docker Compose**
@@ -115,3 +115,14 @@ python manage.py runserver
    - `oleg@example.com`
 
 После применения миграций у каждого из этих пользователей уже есть как минимум один созданный проект.
+
+
+## Автор проекта:
+
+Виолетта Устюжанина
+
+Контакты:
+
+- GitHub: https://github.com/vlkttlv
+- Telegram: https://t.me/vlkttlv
+- Email: vitavitavita04@bk.ru

@@ -4,9 +4,8 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.shortcuts import get_object_or_404, redirect, render
 
 from team_finder.service import paginate_queryset
-
-from .forms import LoginForm, RegisterForm, UserProfileForm
-from .models import User
+from users.forms import LoginForm, RegisterForm, UserProfileForm
+from users.models import User
 
 
 def register_view(request):

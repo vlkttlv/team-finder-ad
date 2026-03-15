@@ -3,12 +3,12 @@ from django.contrib.auth import authenticate
 
 from team_finder.constants import USER_NAME_MAX_LENGTH, USER_SURNAME_MAX_LENGTH
 from team_finder.validators import validate_github_url
-
-from .models import User
+from users.models import User
 
 
 class RegisterForm(forms.Form):
     """Форма регистрации нового пользователя."""
+
     name = forms.CharField(max_length=USER_NAME_MAX_LENGTH, label="Имя")
     surname = forms.CharField(
         max_length=USER_SURNAME_MAX_LENGTH,
@@ -38,6 +38,7 @@ class RegisterForm(forms.Form):
 
 class LoginForm(forms.Form):
     """Форма входа пользователя"""
+
     email = forms.EmailField(label="Email")
     password = forms.CharField(widget=forms.PasswordInput, label="Пароль")
 
@@ -56,6 +57,7 @@ class LoginForm(forms.Form):
 
 class UserProfileForm(forms.ModelForm):
     """Форма редактирования профиля пользователя"""
+
     avatar = forms.ImageField(
         required=False,
         widget=forms.FileInput(attrs={"accept": "image/*"}),
